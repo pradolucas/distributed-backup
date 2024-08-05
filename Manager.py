@@ -1,21 +1,16 @@
 import socket
 import threading
+from Worker import Worker
 from Registry import LocalRegistry
 
 
-class Server(threading.Thread):
-
-    # def __init__(self, ip, number_port, path_folder, manager_flag: bool):
-    def __init__(self, ip, number_port, path_folder):
-        super().__init__()
-        self.ip_addr = ip
-        self.number_port = number_port
-        self.path_folder = path_folder
-        # self.manager = manager_flag
-        self.reg = LocalRegistry()
-        self.manager_ip = "localhost"
-        self.manager_port = "8080"
-        self.connect_manager()
+class Manager (Worker):
+    def __init__(self, ip, number_port):
+        # analyse type of architecture to not account fo path_folder
+        super().__init__(ip, number_port, path_folder="")
+        # self.ip_addr = ip
+        # self.number_port = number_port
+        # self.reg = LocalRegistry()
 
     def listen(self):
 

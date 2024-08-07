@@ -1,60 +1,71 @@
+from ast import literal_eval
 import socket
-import threading
-from Worker import Worker
+# import threading
 from Registry import LocalRegistry
+import Server
+from Server import Server, ConnThread
 
 
-class Manager (Worker):
-    def __init__(self, ip, number_port):
+class Manager (Server):
+    def __init__(self, ip, port_number):
         # analyse type of architecture to not account fo path_folder
-        super().__init__(ip, number_port, path_folder="")
-        # self.ip_addr = ip
-        # self.number_port = number_port
+        super().__init__(ip, port_number)
+        Server.listen(self, Manager.ConnThread)
         # self.reg = LocalRegistry()
+        
+    
+    class ConnThread(ConnThread):
 
-    def listen(self):
-
-        self.start()
-        # Function to listen to requests from Server
-        self.listen_peers()
-
-    def listen_peers(self):
         """
-        Instatiate a socket that listen to new conn
-        New conns are put in a new thread
+        Threats the Server/Client connection request
         """
 
-        def listen():
-            listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            listen_socket.bind((self.ip_addr, self.number_port))
-            listen_socket.listen(5)
-            while True:
-                connect_socket, _ = listen_socket.accept()
-                ConnThread(connect_socket).start()
+        def __init__(self, server, conn: socket.socket):
+            super().__init__(server, conn)
+            # print("Running init manager conn thread")
 
-        threading.Thread(target=listen).start()
+        # @staticmethod
+        def next_server_workload(self, reg):
+            return reg.next()
+        
+        # @staticmethod
+        def redirect_conn(self, reg: LocalRegistry, conn: socket.socket):
+            """
+            """
+            # threading.Thread(target=send_file_to_server,
+            #                  args=(ip_d, port_d, file_name)).start()
+            # server_redirect_addr = ConnThread.next_server_workload(reg)
+            server_redirect_addr = reg.next()
+            # s = Server.tcp_socket_create_connect(*conn.getpeername())
+            msg = f'<REDIRECT> {server_redirect_addr}'.encode('ascii')
+            # <{",".join([str(s) for s in server_redirect])}>'
+            print("[MANAGER] Sending redirect")
+            conn.sendall(msg)
+            print(msg)
 
-
-class ConnThread(threading.Thread):
-
-    """
-    Threats the Server/Client connection request
-    """
-
-    def __init__(self, conn):
-        super().__init__()
-        self.conn = conn
-
-    def run(self):
-        try:
-            istream = self.conn.makefile("r")
-            msg = istream.readline().strip()
-            splits = msg.split(">")
-            if splits[0] == "<JOIN>":  # FROM SERVER
-                self.reg.joinServer(self.conn.getpeername())  # (ip, port); updates list
-            elif splits[0] == "<SAVE>":  # FROM CLIENT
+        def run(self):
+            print("[Manager] Running Manager conn thread")
+            print(f"[Manager] Connected to {self.conn.getpeername()}")
+            try:
+                print("[Manager] waiting response")
+                msg = self.conn.recv(1024).decode('utf-8').strip()
+                # istream = self.conn.makefile("r")
+                # msg = istream.readline().strip()
+                print(f"[Manager] Manager Received a message: {msg}")
+                if msg.startswith("<JOIN>"):  # FROM SERVER
+                    # Updates server list, (ip, port)
+                    # print("[Manager] Received a <JOIN>")
+                    server_redirect_addr = literal_eval(msg.split(">")[1])
+                    self.server.reg.join_server(*server_redirect_addr)
+                    print(self.server.reg.servers)
+                elif msg.startswith("<SAVE>"):  # FROM CLIENT
+                    # Redirect connection
+                    print("[Manager] Received a <SAVE>")
+                    self.redirect_conn(self.server.reg, self.conn)
+                    # Send message to designated server?
+                self.conn.close()
+                # print("\n>>>")
+            except IOError:
                 pass
+            
             self.conn.close()
-            print("\n>>>")
-        except IOError:
-            pass

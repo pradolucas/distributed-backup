@@ -9,7 +9,8 @@ class LocalRegistry:
 
     def __init__(self):
         self.servers = []  # Changed from set to list
-        self.next_idx = -1
+        self.forward_idx = -1
+        self.backup_idx = -2
 
     def join_server(self, ip, port):
         """
@@ -23,14 +24,23 @@ class LocalRegistry:
             self.servers.append((ip, port))
         return f"Server {ip}:{port} joined"
 
-    def next(self):
+    def next_redirect(self):
         """
-        Get next server with round robin selection 
+        Get next server for download with round robin selection
         """
-        self.next_idx = (self.next_idx + 1) % len(self.servers)
-        next_val = self.servers[self.next_idx]
+        self.forward_idx = (self.forward_idx + 1) % len(self.servers)
+        next_val = self.servers[self.forward_idx]
+        return next_val
+
+    def next_backup(self):
+        """
+        Get next server for backup with round robin selection
+        """
+        self.backup_idx = (self.backup_idx + 1) % len(self.servers)
+        next_val = self.servers[self.backup_idx]
         return next_val
 
     def __str__(self):
         pprint(self.servers)
-        return 
+        return ""
+  
